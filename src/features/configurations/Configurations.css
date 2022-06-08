@@ -1,0 +1,30 @@
+.logo {
+    height: 32px;
+    margin: 16px;
+    /*background: rgba(255, 255, 255, 0.3);*/
+}
+
+.steps {
+    margin-top: 50px;
+    padding-left: 15px;
+}
+
+.hosts-list {
+    margin-top: 10px;
+}
+
+.site-layout .site-layout-background {
+    background: #eff4f9;
+}
+
+.ant-layout-sider-children {
+    background: #eff4f9;
+}
+
+.ant-layout-content {
+    background: #eff4f9;
+}
+
+[data-theme="dark"] .site-layout .site-layout-background {
+    background: #eff4f9;
+}
