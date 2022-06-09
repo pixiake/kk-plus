@@ -9,13 +9,39 @@ const initialState = {
          worker: [],
          registry: []
       },
-      controlPlaneEndpoint: {},
+      controlPlaneEndpoint: {
+         domain: "lb.kubesphere.local",
+         address: "",
+         port: 6443,
+      },
       system:{},
-      kubernetes: {},
-      network: {},
+      kubernetes: {
+         type: "kubernetes",
+         version: "v1.21.5",
+         containerManager: "docker",
+         autoRenewCerts: true,
+         kata: {
+            enabled: false
+         },
+         nodeFeatureDiscovery: {
+            enabled: false
+         },
+         nodelocaldns: true,
+
+      },
+      network: {
+         plugin: "calico",
+         kubePodsCIDR: "10.233.64.0/18",
+         kubeServiceCIDR: "10.233.0.0/18"
+      },
       addons: {},
       etcd: {},
-      registry: {},
+      registry: {
+         type: "default",
+         privateRegistry: "",
+         namespaceOverride: "",
+         auths: {},
+      },
    },
    step: 0
 };
@@ -28,6 +54,19 @@ export const configurationsSlice = createSlice({
       updateHosts: (state, action) => {
          state.cluster.hosts = action.payload.hosts
          state.cluster.roleGroups = action.payload.roleGroups
+
+      },
+      updateRegistry: (state, action) => {
+         state.cluster.registry = action.payload.registry
+      },
+      updateControlPlane: (state, action) => {
+         state.cluster.controlPlaneEndpoint = action.payload.controlPlaneEndpoint
+      },
+      updateCluster: (state, action) => {
+         state.cluster.kubernetes = action.payload.kubernetes
+      },
+      updateNetwork: (state, action) => {
+         state.cluster.network = action.payload.network
       },
       nextStep: (state) => {
          state.step += 1
@@ -40,7 +79,11 @@ export const configurationsSlice = createSlice({
 })
 
 export const {
-   updateHosts,
+    updateHosts,
+    updateRegistry,
+    updateControlPlane,
+    updateCluster,
+    updateNetwork,
     nextStep,
     lastStep
 } = configurationsSlice.actions

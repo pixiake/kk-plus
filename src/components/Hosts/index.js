@@ -17,7 +17,7 @@ import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import TextArea from "antd/es/input/TextArea";
 import {
     nextStep,
-    selectConfiguration,
+    selectConfiguration, selectStep,
     updateHosts
 } from "../../features/configurations/configurationsSlice";
 import {useDispatch, useSelector} from "react-redux";
@@ -54,28 +54,28 @@ const formItemLayoutWithOutLabel = {
     },
 };
 
+const initValues = {
+    name: "",
+    address: "",
+    internalAddress: "",
+    key: "",
+    password: "",
+    ssh: "password",
+    port: 22,
+    user: "root",
+    roles: ["工作节点"],
+    arch: "amd64"
+}
+
 const Hosts = () => {
     const [form] = Form.useForm();
-    const initValues = {
-        name: "",
-        address: "",
-        internalAddress: "",
-        key: "",
-        password: "",
-        ssh: "password",
-        port: 22,
-        user: "root",
-        roles: ["工作节点"],
-        arch: "amd64"
-    }
-
-
-    const [visible, setVisible] = useState(false);
-    const [isDisabled, setIsDisabled] = useState(false);
-
     const dispatch = useDispatch();
 
     const configuration = useSelector(selectConfiguration);
+    const step = useSelector(selectStep);
+
+    const [visible, setVisible] = useState(false);
+    const [isDisabled, setIsDisabled] = useState(false);
 
     const checkHostName = (_, value) => {
         let duplicateHostName = false
@@ -310,7 +310,6 @@ const Hosts = () => {
 
     const handleOk = () => {
         const host = form.getFieldsValue(true)
-        console.log(host)
         let hosts = configuration.hosts.filter((item) => (item.name !== host.name))
 
         const labelsMap = {}
@@ -394,15 +393,7 @@ const Hosts = () => {
 
     const plainOptions = ['主节点', '工作节点', '镜像仓库节点'];
 
-    return (
-        <div
-            className="site-layout-background"
-            style={{
-                padding: 24,
-                minHeight: 360,
-            }}
-        >
-
+    return step === 0 ? (
             <Card
                 title="主机设置"
                 style={{ marginTop: 16 }}
@@ -521,11 +512,13 @@ const Hosts = () => {
                     </Form>
                 </Modal>
                 <Table className="hosts-list" columns={columns} dataSource={hosts(configuration)} />
-                <div>
-                    <Button type={ "primary" } style={{ float: "right" }} onClick={() => dispatch(nextStep())}>下一步</Button>
+                <div style={{ float: "left" }} >
+                    <Button type={ "primary" } onClick={() => dispatch(nextStep())}>下一步</Button>
                 </div>
             </Card>
-        </div>
+
+    ) : (
+        <noscript></noscript>
     );
 };
 

@@ -10,19 +10,19 @@ const {Step} = Steps
 const steps = [
     {id: "step1", title: "主机设置"},
     {id: "step2", title: "镜像仓库设置"},
-    {id: "step3", title: "ETCD 设置"},
+    {id: "step3", title: "控制平面设置"},
     {id: "step4", title: "集群设置"},
     {id: "step5", title: "网络设置"},
     {id: "step6", title: "存储设置"},
-    {id: "step7", title: "镜像仓库设置"},
-    {id: "step8", title: "KubeSphere 设置"},
-    {id: "step9", title: "安装"},
+    {id: "step7", title: "KubeSphere 设置"},
+    {id: "step8", title: "安装"},
 ]
 
-const Stepper = (props) => {
+const Stepper = () => {
+    const step = useSelector(selectStep);
     return (
         <div className="steps">
-            <Steps direction="vertical" size="small" current={props.children}>
+            <Steps direction="vertical" size="small" current={ step }>
                 {
                     steps.map((item) => (
                         <Step key={item.id} title={item.title} />
