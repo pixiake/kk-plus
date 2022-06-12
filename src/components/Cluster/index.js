@@ -179,36 +179,36 @@ const Cluster = () => {
                 >
                     <Form.Item label="集群类型" name="type">
                         <Radio.Group onChange={onChangeType} >
-                            <Radio value="kubernetes">
+                            <Radio.Button value="kubernetes">
                                     kubernetes
-                            </Radio>
-                            <Radio value="k3s">
+                            </Radio.Button>
+                            <Radio.Button value="k3s">
                                     k3s
-                            </Radio>
+                            </Radio.Button>
                         </Radio.Group>
                     </Form.Item>
                     <Form.Item label="容器运行时" name="containerManager">
                         <Radio.Group onChange={onChangeRuntime} disabled={disabled.containerManager}>
-                            <Radio value="docker">
+                            <Radio.Button value="docker">
                                 <Tooltip>
                                     Docker
                                 </Tooltip>
-                            </Radio>
-                            <Radio value="containerd">
+                            </Radio.Button>
+                            <Radio.Button value="containerd">
                                 <Tooltip>
                                     Containerd
                                 </Tooltip>
-                            </Radio>
-                            <Tooltip title="集群节点需提前预装 CRI-O">
-                                <Radio value="cri-o">
-                                        CRI-O
-                                </Radio>
-                            </Tooltip>
-                            <Tooltip title="集群节点需提前预装 iSula">
-                                <Radio value="isula">
-                                        iSula
-                                </Radio>
-                            </Tooltip>
+                            </Radio.Button>
+                            <Radio.Button value="cri-o">
+                                <Tooltip title="集群节点需提前预装 CRI-O">
+                                    CRI-O
+                                </Tooltip>
+                            </Radio.Button>
+                            <Radio.Button value="isula">
+                                <Tooltip title="集群节点需提前预装 iSula">
+                                    iSula
+                                </Tooltip>
+                            </Radio.Button>
                         </Radio.Group>
                     </Form.Item>
                     <Form.Item label="集群 DNS 缓存" valuePropName="checked" name="nodeLocalDNS">

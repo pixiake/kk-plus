@@ -1,30 +1,20 @@
-import {Button, Card, Form, Radio, Tooltip, Switch, Col, Input} from "antd";
+import {Button, Card, Form, Radio, Tooltip, Switch, Col, Input, Select} from "antd";
 import {useDispatch, useSelector} from "react-redux";
 import {
     lastStep,
     nextStep,
     selectConfiguration,
-    selectStep, updateCluster, updateControlPlane, updateNetwork,
+    selectStep, updateAddons, updateNetwork,
 } from "../../features/configurations/configurationsSlice";
-import MaskedInput from 'react-maskedinput'
 import React, { useState } from 'react';
 
-import DynamicField from "../DynamicField";
-
+const { Option } = Select;
 const tailLayout = {
     wrapperCol: {
         offset: 4,
         span: 16,
     },
 };
-
-
-
-const contentList = {
-    tab1: <p>content1</p>,
-    tab2: <p>content2</p>,
-};
-
 
 const Storage = () => {
     const [form] = Form.useForm();
@@ -36,48 +26,123 @@ const Storage = () => {
     const step = useSelector(selectStep);
 
 
-    const getNetworkConfig = (network) => {
+    const getStorageConfig = (addons) => {
+        let addon;
         let config = {
-            plugin: network.plugin,
-            podsCIDR: network.kubePodsCIDR,
-            serviceCIDR: network.kubeServiceCIDR,
+            storageType: 'local'
         }
-        console.log(config)
+        for (addon in addons) {
+            switch (addon.name) {
+                case 'nfs-client':
+                    let value
+                    config = {
+                        storageType: 'nfs',
+                        nfsServer: '',
+                        nfsPath: ''
+                    }
+                    for (value in addon.sources.chart.values) {
+                        if (value.split('=')[0] === 'nfs.server') {
+                            config.nfsServer = value.split('=')[1]
+                        }
+                        if (value.split('=')[0] === 'nfs.path') {
+                            config.nfsPath = value.split('=')[1]
+                        }
+                    }
+                    break
+                case 'rook-ceph':
+                    config = {
+                        storageType: 'ceph',
+                        nodes: []
+                    }
+                    for (value in addon.sources.chart.values) {
+                        let valueSplit = value.split('=')
+                        if (valueSplit[0].includes('ceph.storage.nodes')) {
+                            config.nodes.push(valueSplit[1])
+                        }
+                    }
+                    break
+                default:
+                    config = {
+                        storageType: 'local'
+                    }
+            }
+        }
+
         return config
     }
 
-    // const [initValue] = useState(getNetworkConfig(configuration.network))
-    //
+    const [initValue] = useState(getStorageConfig(configuration.addons))
 
-    const saveNetworkConfig = () => {
-        const network = form.getFieldsValue(true)
+    const saveStorageConfig = () => {
+        let config = []
+        let addon = {}
+        const storage = form.getFieldsValue(true)
+        switch (storage.storageType) {
+            case 'nfs':
+                addon = {
+                    name: 'nfs-client',
+                    namespace: 'kube-system',
+                    sources: {
+                        chart: {
+                            name: 'nfs-client-provisioner',
+                            path: 'charts',
+                            values: [
+                                'storageClass.defaultClass=true',
+                                `nfs.server=${storage.nfsServer}`,
+                                `nfs.path=${storage.nfsPath}`
+                            ]
+                        }
+                    },
+                }
 
-        let config = {
-            plugin: network.plugin,
-            podsCIDR: network.kubePodsCIDR,
-            serviceCIDR: network.kubeServiceCIDR,
+                config = configuration.addons.filter((item) => item.name !== 'nfs-client')
+                config.unshift(addon)
+                break
+            case 'ceph':
+                let values = [
+                    `enableHA=${storage.nodes.length > 2}`,
+                    `ceph.storage.useAllNodes=${storage.nodes.length === 0}`
+                ]
+                storage.nodes.map((node, index) => {
+                    values.push(`ceph.storage.nodes[${index.toString()}]=${node}`)
+                })
+                addon = {
+                    name: 'rook-ceph',
+                    namespace: 'rook-ceph',
+                    sources: {
+                        chart: {
+                            name: 'ceph-cluster',
+                            path: 'charts',
+                            values: values
+                        }
+                    },
+                }
+                config = configuration.addons.filter((item) => item.name !== 'rook-ceph')
+                config.unshift(addon)
+                break
+            default:
+                addon = {}
+
+            dispatch(updateAddons(
+                {
+                    addons: config
+                }
+            ))
         }
-
-        dispatch(updateNetwork(
-            {
-                network: config
-            }
-        ))
-
     }
+
     const handleSubmmit = () => {
-        saveNetworkConfig()
+        saveStorageConfig()
         dispatch(nextStep())
     }
 
     const handleLastStep = () => {
-        saveNetworkConfig()
+        saveStorageConfig()
         dispatch(lastStep())
     }
 
     const onChange = () => {
         const storage = form.getFieldsValue(true)
-        console.log(storage)
         switch (storage.storageType) {
             case 'nfs':
                 setStorageType('nfs')
@@ -90,32 +155,69 @@ const Storage = () => {
         }
     }
 
-    const storageConfig = (storageType) => {
-        console.log(storageType)
-        switch (storageType) {
-            case 'nfs':
-                return (
-                    <>
-                        <Form.Item label="NFS 服务地址" name="nfsServer">
-                            <Input />
-                        </Form.Item>
-                        <Form.Item label="NFS 服务路径" name="nfsPath">
-                            <Input />
-                        </Form.Item>
-                    </>
-                )
-            default:
-                return (
-                    <noscript/>
-                )
+    const showNodes = () => {
+            let children = [];
+            let hostList = []
+
+            const nodes = [...new Set(configuration.roleGroups.controlPlane.concat(configuration.roleGroups.worker))]
+
+            configuration.hosts.forEach(
+                (item) => {
+                    if (nodes.includes(item.name)) {
+                        hostList.push(item)
+                    }
+                }
+            )
+
+            // const filteredOptions = hostList.filter((o) => !selectedItems.includes(o.name.toString()))
+            hostList.map((host) => {
+                children.push(<Option name={host.name.toString()} key={host.name.toString()}
+                                      label={host.name.toString()}
+                                      value={host.name.toString()}> {host.name.toString() + ' (' + host.internalAddress.toString() + ')'} </Option>)
+            })
+            return children
         }
-    }
+
+    const storageConfig = (storageType) => {
+            switch (storageType) {
+                case 'nfs':
+                    return (
+                        <>
+                            <Form.Item label="NFS 服务地址" name="nfsServer">
+                                <Input/>
+                            </Form.Item>
+                            <Form.Item label="NFS 服务路径" name="nfsPath">
+                                <Input/>
+                            </Form.Item>
+                        </>
+                    )
+                case 'ceph':
+                    return (
+                        <>
+                            <Form.Item
+                                name="nodes"
+                                label="选择存储节点"
+                                rules={[{required: true, message: '请指定集群中节点安装 ceph !', type: 'array'}]}
+                                extra="被选中节点上的所有未格式化硬盘或分区，将会被 ceph 纳管，组成存储资源池，请确保所选节点上存在未格式化的硬盘或分区。如需实现存储高可用，请选择至少三个节点。"
+                            >
+                                <Select mode="multiple" placeholder="请指定集群中节点安装 ceph " optionLabelProp="label">
+                                    {showNodes()}
+                                </Select>
+                            </Form.Item>
+                        </>
+                    )
+                default:
+                    return (
+                        <noscript/>
+                    )
+            }
+        }
 
 
     return step === 5 ? (
             <Card
                 title="存储设置"
-                style={{ marginTop: 16 }}
+                style={{marginTop: 16}}
                 type="inner"
             >
                 <Form
@@ -126,37 +228,37 @@ const Storage = () => {
                         span: 6,
                     }}
                     layout="horizontal"
-                    // initialValues={ initValue }
+                    initialValues={ initValue }
                     form={form}
-                    onFinish={ handleSubmmit }
+                    onFinish={handleSubmmit}
                 >
                     <Form.Item label="存储类型" name="storageType">
                         <Radio.Group onChange={onChange}>
-                            <Tooltip title="将自动安装 openebs local provisioner 提供本地存储服务">
-                               <Radio value="local">
-                                   本地存储
-                               </Radio>
-                            </Tooltip>
-                            <Tooltip title="将根据配置自动安装 nfs-client-provisioner 对接第三方 NFS 存储">
-                               <Radio value="nfs">
-                                   对接 NFS
-                               </Radio>
-                            </Tooltip>
-                            <Tooltip title="将在集群中安装 rook-ceph，要求存储节点挂载裸盘">
-                               <Radio value="ceph">
-                                   Rook Ceph
-                               </Radio>
-                            </Tooltip>
+                            <Radio value="local">
+                                <Tooltip title="将自动安装 openebs local provisioner 提供本地存储服务">
+                                    本地存储
+                                </Tooltip>
+                            </Radio>
+                            <Radio value="nfs">
+                                <Tooltip title="将根据配置，自动安装 nfs-client-provisioner 对接第三方 NFS 存储">
+                                    对接 NFS
+                                </Tooltip>
+                            </Radio>
+                            <Radio value="ceph">
+                                <Tooltip title="将在集群中安装 rook-ceph，要求存储节点拥有未被格式化的磁盘或分区">
+                                    Rook Ceph
+                                </Tooltip>
+                            </Radio>
                         </Radio.Group>
                     </Form.Item>
-                    { storageConfig(storageType) }
+                    {storageConfig(storageType)}
                     <Form.Item {...tailLayout}>
                         <Button
                             htmlType="button"
                             style={{
                                 margin: '0 8px',
                             }}
-                            onClick={ handleLastStep }
+                            onClick={handleLastStep}
                         >
                             上一步
                         </Button>
@@ -165,10 +267,9 @@ const Storage = () => {
                         </Button>
                     </Form.Item>
                 </Form>
-        </Card>
-    ) : (
-        <noscript></noscript>
-    )
+            </Card>
+        ) : (
+            <noscript></noscript>
+        )
 }
-
 export default Storage

@@ -34,7 +34,7 @@ const initialState = {
          kubePodsCIDR: "10.233.64.0/18",
          kubeServiceCIDR: "10.233.0.0/18"
       },
-      addons: {},
+      addons: [],
       etcd: {},
       registry: {
          type: "default",
@@ -68,6 +68,9 @@ export const configurationsSlice = createSlice({
       updateNetwork: (state, action) => {
          state.cluster.network = action.payload.network
       },
+      updateAddons: (state, action) => {
+         state.cluster.addons = action.payload.addons
+      },
       nextStep: (state) => {
          state.step += 1
          console.log(state.step)
@@ -84,6 +87,7 @@ export const {
     updateControlPlane,
     updateCluster,
     updateNetwork,
+    updateAddons,
     nextStep,
     lastStep
 } = configurationsSlice.actions
